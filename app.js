@@ -499,39 +499,15 @@ function getMyLocation() {
 }
 
 function sendOrderToDatabase(orderData) {
-  const binId = process.env.JSONBIN_BIN_ID;
-const apiKey = process.env.JSONBIN_API_KEY;
-
-  fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      method: 'GET',
+  fetch('/.netlify/functions/add-order', {
+      method: 'POST',
       headers: {
-          'X-Master-Key': apiKey,
-          'X-Access-Key': apiKey
-      }
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderData)
   })
   .then(response => {
-      if (!response.ok) throw new Error("فشل في جلب الطلبات السابقة.");
-      return response.json();
-  })
-  .then(data => {
-      let currentOrders = [];
-      if (data && data.record) {
-          currentOrders = Array.isArray(data.record) ? data.record : (data.record.orders || []);
-      }
-      
-      currentOrders.push(orderData);
-
-      return fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-          method: 'PUT',
-          headers: {
-              'Content-Type': 'application/json',
-              'X-Master-Key': apiKey
-          },
-          body: JSON.stringify({ orders: currentOrders })
-      });
-  })
-  .then(response => {
-      if (!response.ok) throw new Error("فشل في تحديث قاعدة البيانات.");
+      if (!response.ok) throw new Error("فشل في إرسال الطلب.");
       return response.json();
   })
   .catch(error => {
@@ -591,18 +567,11 @@ function renderOrders() {
 
   container.innerHTML = '<div style="text-align:center; color:#aaa;">جاري تحميل طلباتك...</div>';
 
-  const binId = process.env.JSONBIN_BIN_ID;
-const apiKey = process.env.JSONBIN_API_KEY;
-
-
-  fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      method: 'GET',
-      headers: {
-          'X-Master-Key': apiKey,
-          'X-Access-Key': apiKey
-      }
+  fetch('/.netlify/functions/get-orders')
+  .then(response => {
+      if (!response.ok) throw new Error("فشل في جلب الطلبات.");
+      return response.json();
   })
-  .then(response => response.json())
   .then(data => {
       let remoteOrders = [];
       if (data && data.record) {
