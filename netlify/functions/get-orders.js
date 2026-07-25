@@ -1,8 +1,9 @@
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-  const binId = process.env.JSON_BIN_ID;
-  const apiKey = process.env.JSON_BIN_KEY;
+    const binId = process.env.JSONBIN_BIN_ID;
+  const apiKey = process.env.JSONBIN_API_KEY;
+
 
   try {
     const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
