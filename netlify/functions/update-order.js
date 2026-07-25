@@ -5,8 +5,9 @@ exports.handler = async function(event, context) {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  const binId = process.env.JSON_BIN_ID;
-  const apiKey = process.env.JSON_BIN_KEY;
+    const binId = process.env.JSONBIN_BIN_ID;
+  const apiKey = process.env.JSONBIN_API_KEY;
+
 
   try {
     const { orderId, newStatus } = JSON.parse(event.body);
