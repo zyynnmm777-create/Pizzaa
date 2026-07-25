@@ -499,8 +499,8 @@ function getMyLocation() {
 }
 
 function sendOrderToDatabase(orderData) {
-  const binId = "6a62de31da38895dfe880c51";
-  const apiKey = "$2a$10$SFp39MxEU6Yap7LAY.6R/uvwKjPWfBZDiBUW0miqPPwM9aGmwSPna"; 
+  const binId = process.env.JSONBIN_BIN_ID;
+const apiKey = process.env.JSONBIN_API_KEY;
 
   fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
       method: 'GET',
@@ -591,8 +591,9 @@ function renderOrders() {
 
   container.innerHTML = '<div style="text-align:center; color:#aaa;">جاري تحميل طلباتك...</div>';
 
-  const binId = "6a62de31da38895dfe880c51";
-  const apiKey = "$2a$10$SFp39MxEU6Yap7LAY.6R/uvwKjPWfBZDiBUW0miqPPwM9aGmwSPna";
+  const binId = process.env.JSONBIN_BIN_ID;
+const apiKey = process.env.JSONBIN_API_KEY;
+
 
   fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
       method: 'GET',
