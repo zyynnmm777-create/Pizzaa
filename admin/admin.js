@@ -53,9 +53,9 @@
             </div>
             
             <div class="customer-info">
-              <p><strong>👤 الزبون:</strong> ${o.customerName || 'غير متوفر'}</p>
-              <p><strong>📞 الموبايل:</strong> <a href="tel:${o.customerPhone}" style="color:#ff4d4d; text-decoration:none;">${o.customerPhone || 'غير متوفر'}</a></p>
-              <p><strong>📍 العنوان:</strong> ${o.customerLocation || 'غير متوفر'}</p>
+              <p><strong>👤 الزبون:</strong> ${o.customer_name || o.customerName || 'غير متوفر'}</p>
+<p><strong>📞 الموبايل:</strong> <a href="tel:${o.customer_phone || o.customerPhone}" style="color:#ff4d4d; text-decoration:none;">${o.customer_phone || o.customerPhone || 'غير متوفر'}</a></p>
+<p><strong>📍 العنوان:</strong> ${o.customer_location || o.customerLocation || 'غير متوفر'}</p>
             </div>
 
             <div class="items-list">
