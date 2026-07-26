@@ -6,25 +6,18 @@
         throw new Error("Unauthorized");
     }
 
-    function fetchOrders() {
+        function fetchOrders() {
       let container = document.getElementById("adminOrdersList");
       container.innerHTML = '<div class="loading">جاري تحديث الطلبات...</div>';
 
-      // الاتصال بدالة السيرفر الآمنة بدلاً من كشف المفتاح
       fetch('/.netlify/functions/get-orders')
       .then(response => {
         if (!response.ok) throw new Error("فشل في جلب البيانات.");
         return response.json();
       })
       .then(data => {
-        let orders = [];
-        if (data && data.record) {
-          if (Array.isArray(data.record)) {
-            orders = data.record;
-          } else if (Array.isArray(data.record.orders)) {
-            orders = data.record.orders;
-          }
-        }
+        // Supabase يعيد البيانات كمصفوفة مباشرة
+        let orders = Array.isArray(data) ? data : (data.orders || []);
         renderAdminOrders(orders);
       })
       .catch(error => {
@@ -32,6 +25,7 @@
         container.innerHTML = '<div class="loading" style="color:#ff4d4d;">حدث خطأ أثناء جلب الطلبات. يرجى المحاولة لاحقاً.</div>';
       });
     }
+
 
     function renderAdminOrders(orders) {
       let container = document.getElementById("adminOrdersList");
@@ -112,4 +106,3 @@
     window.onload = function() {
       fetchOrders();
     };
-
