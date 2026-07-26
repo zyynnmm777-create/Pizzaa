@@ -553,7 +553,6 @@ function checkout() {
   let total = cart.reduce((sum, i) => sum + (Number(i.price)||0) * (Number(i.qty)||0), 0);
   let finalTotal = total - (total * discount / 100);
   
-  // تجهيز البيانات بالأسماء المتوافقة مع أعمدة جدول Supabase في دوال Netlify
   let newOrderPayload = {
     customer_name: user.name,
     customer_phone: user.phone,
@@ -562,8 +561,7 @@ function checkout() {
     total: finalTotal
   };
 
-  // إرسال الطلب إلى دالة Netlify الآمنة التي ستربطه بـ Supabase
-  fetch('/.netlify/functions/update-order', { // أو اسم ملف الدالة لديك الذي يتعامل مع الإضافة والتحديث
+  fetch('/.netlify/functions/update-order', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -599,15 +597,17 @@ function renderOrders() {
 
   container.innerHTML = '<div style="text-align:center; color:#aaa;">جاري تحميل طلباتك...</div>';
 
-  // جلب الطلبات من دالة السيرفر الآمنة
   fetch('/.netlify/functions/get-orders')
   .then(response => {
     if (!response.ok) throw new Error("فشل في جلب الطلبات.");
     return response.json();
   })
   .then(remoteOrders => {
-    // تصفية الطلبات الخاصة برقم الهاتف الحالي للزبون المسجل
-    let myOrders = remoteOrders.filter(o => o.customer_phone === user.phone);
+    // دعم كلا الاحتمالين (customer_phone أو customerPhone) للتوافق التام مع قاعدة البيانات
+    let myOrders = remoteOrders.filter(o => {
+      let phoneInDb = o.customer_phone || o.customerPhone;
+      return phoneInDb === user.phone;
+    });
 
     if (myOrders.length === 0) {
       container.innerHTML = `
