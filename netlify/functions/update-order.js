@@ -1,68 +1,46 @@
-const fetch = require('node-fetch');
+const { createClient } = require('@supabase/supabase-js');
 
-exports.handler = async function(event, context) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-    const binId = process.env.JSONBIN_BIN_ID;
-  const apiKey = process.env.JSONBIN_API_KEY;
-
-
+exports.handler = async (event) => {
   try {
-    const { orderId, newStatus } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
 
-    // 1. جلب البيانات الحالية
-    const getRes = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': apiKey,
-        'X-Access-Key': apiKey
-      }
-    });
+    // إذا كان الطلب يتضمن ID وحالة، فهذا يعني تحديث حالة الطلب
+    if (body.id && body.status) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: body.status })
+        .eq('id', body.id);
 
-    if (!getRes.ok) throw new Error("فشل في جلب البيانات.");
-    const data = await getRes.json();
+      if (error) throw error;
+      return { statusCode: 200, body: JSON.stringify({ success: true, message: 'تم التحديث بنجاح' }) };
+    } 
+    
+    // وإلا فهذا يعني إنشاء طلب جديد من المتجر
+    else {
+      const { error } = await supabase.from('orders').insert([
+        {
+          customer_name: body.customer_name,
+          customer_phone: body.customer_phone,
+          customer_location: body.customer_location,
+          items: body.items,
+          total: body.total,
+          status: 'جديد'
+        }
+      ]);
 
-    let orders = [];
-    if (data && data.record) {
-      if (Array.isArray(data.record)) {
-        orders = data.record;
-      } else if (Array.isArray(data.record.orders)) {
-        orders = data.record.orders;
-      }
+      if (error) throw error;
+      return { statusCode: 200, body: JSON.stringify({ success: true, message: 'تم حفظ الطلب بنجاح' }) };
     }
 
-    // 2. تحديث الحالة للطلب المطلوب
-    let targetOrder = orders.find(o => String(o.id) === String(orderId));
-    if (targetOrder) {
-      targetOrder.status = newStatus;
-    }
-
-    let payload = Array.isArray(data.record) ? orders : { orders: orders };
-
-    // 3. رفع البيانات المحدثة لقاعدة البيانات
-    const putRes = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': apiKey,
-        'X-Access-Key': apiKey
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!putRes.ok) throw new Error("فشل تحديث الحالة.");
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, message: "تم التحديث بنجاح" })
-    };
-
-  } catch (error) {
+  } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
