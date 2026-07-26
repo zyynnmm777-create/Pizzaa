@@ -553,31 +553,39 @@ function checkout() {
   let total = cart.reduce((sum, i) => sum + (Number(i.price)||0) * (Number(i.qty)||0), 0);
   let finalTotal = total - (total * discount / 100);
   
-  let orderId = Date.now() + Math.floor(Math.random() * 900 + 100);
-  let currentDate = new Date().toLocaleDateString('en-US');
-
-  let newOrder = { 
-    id: orderId, 
-    date: currentDate, 
-    customerName: user.name,
-    customerPhone: user.phone,
-    customerLocation: user.location,
-    items: [...cart], 
-    total: finalTotal, 
-    status: 'قيد المراجعة ⏳' 
+  // تجهيز البيانات بالأسماء المتوافقة مع أعمدة جدول Supabase في دوال Netlify
+  let newOrderPayload = {
+    customer_name: user.name,
+    customer_phone: user.phone,
+    customer_location: user.location,
+    items: cart,
+    total: finalTotal
   };
-  
-  sendOrderToDatabase(newOrder);
 
-  orders.unshift(newOrder);
-  try { localStorage.setItem("orders", JSON.stringify(orders)); } catch(e){}
+  // إرسال الطلب إلى دالة Netlify الآمنة التي ستربطه بـ Supabase
+  fetch('/.netlify/functions/manage-order', { // أو اسم ملف الدالة لديك الذي يتعامل مع الإضافة والتحديث
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(newOrderPayload)
+  })
+  .then(response => {
+    if (!response.ok) throw new Error("فشل إرسال الطلب.");
+    return response.json();
+  })
+  .then(data => {
+    cart = [];
+    discount = 0;
+    updateCartCounter();
 
-  cart = [];
-  discount = 0;
-  updateCartCounter();
-
-  showToast("🎉 تم إرسال طلبك بنجاح للمطعم، جاري تجهيزه!");
-  showPage('ordersPage');
+    showToast("🎉 تم إرسال طلبك بنجاح للمطعم، جاري تجهيزه!");
+    showPage('ordersPage');
+  })
+  .catch(error => {
+    console.error("خطأ في إرسال الطلب:", error);
+    showToast("❌ حدث خطأ أثناء إرسال الطلب، يرجى المحاولة لاحقاَ.");
+  });
 }
 
 function renderOrders() {
@@ -591,54 +599,43 @@ function renderOrders() {
 
   container.innerHTML = '<div style="text-align:center; color:#aaa;">جاري تحميل طلباتك...</div>';
 
-  const binId = "6a62de31da38895dfe880c51";
-  const apiKey = "$2a$10$SFp39MxEU6Yap7LAY.6R/uvwKjPWfBZDiBUW0miqPPwM9aGmwSPna";
-
-  fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
-      method: 'GET',
-      headers: {
-          'X-Master-Key': apiKey,
-          'X-Access-Key': apiKey
-      }
+  // جلب الطلبات من دالة السيرفر الآمنة
+  fetch('/.netlify/functions/get-orders')
+  .then(response => {
+    if (!response.ok) throw new Error("فشل في جلب الطلبات.");
+    return response.json();
   })
-  .then(response => response.json())
-  .then(data => {
-      let remoteOrders = [];
-      if (data && data.record) {
-          remoteOrders = Array.isArray(data.record) ? data.record : (data.record.orders || []);
-      }
-      
-      let myOrders = remoteOrders.filter(o => o.customerPhone === user.phone);
+  .then(remoteOrders => {
+    // تصفية الطلبات الخاصة برقم الهاتف الحالي للزبون المسجل
+    let myOrders = remoteOrders.filter(o => o.customer_phone === user.phone);
 
-      if (myOrders.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state" style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-            <div>لا يوجد طلبات في السجل</div>
-            <div style="font-weight:bold; color:#fff;">اطلب الآن</div>
-            <button class="btn" style="width:200px; margin-top:5px;" onclick="openMenu()">اطلب الآن</button>
-          </div>`;
-        return;
-      }
-
-      myOrders.sort((a, b) => b.id - a.id);
-
-      let totalCount = myOrders.length;
-      container.innerHTML = myOrders.map((o, index) => {
-        let sequentialNum = String(totalCount - index).padStart(6, '0');
-        return `
-        <div class="order-card">
-          <div style="font-weight:bold; display:flex; justify-content: space-between; align-items:center;">
-            <span>طلب رقم: #${sequentialNum}</span>
-            <span style="color:#ff4d4d">${(Number(o.total)||0).toLocaleString('en-US')} ل.س</span>
-          </div>
-          <div style="font-size:0.85em; margin: 6px 0; color:#aaa;">التاريخ: ${o.date || ''}</div>
-          <div style="background:#222; color:#fff; padding:8px; border-radius:8px; text-align:center; margin-top:8px; font-weight:bold; border:1px solid #444;">
-            الحالة الحالية: ${o.status || 'قيد المراجعة ⏳'}
-          </div>
+    if (myOrders.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <div>لا يوجد طلبات في السجل</div>
+          <div style="font-weight:bold; color:#fff;">اطلب الآن</div>
+          <button class="btn" style="width:200px; margin-top:5px;" onclick="openMenu()">اطلب الآن</button>
         </div>`;
-      }).join('');
-      
-      triggerFlash('ordersPage');
+      return;
+    }
+
+    let totalCount = myOrders.length;
+    container.innerHTML = myOrders.map((o, index) => {
+      let sequentialNum = o.id ? String(o.id).slice(-6) : String(totalCount - index).padStart(6, '0');
+      return `
+      <div class="order-card">
+        <div style="font-weight:bold; display:flex; justify-content: space-between; align-items:center;">
+          <span>طلب رقم: #${sequentialNum}</span>
+          <span style="color:#ff4d4d">${(Number(o.total)||0).toLocaleString('en-US')} ل.س</span>
+        </div>
+        <div style="font-size:0.85em; margin: 6px 0; color:#aaa;">التاريخ: ${o.created_at ? new Date(o.created_at).toLocaleDateString() : 'غير متوفر'}</div>
+        <div style="background:#222; color:#fff; padding:8px; border-radius:8px; text-align:center; margin-top:8px; font-weight:bold; border:1px solid #444;">
+          الحالة الحالية: ${o.status || 'قيد المراجعة ⏳'}
+        </div>
+      </div>`;
+    }).join('');
+    
+    triggerFlash('ordersPage');
   })
   .catch(error => {
       console.error("خطأ في جلب الطلبات:", error);
@@ -661,7 +658,7 @@ function doLogin(){
   if(!nameEl || !phoneEl) return;
 
   let name = nameEl.value.trim();
-  let phone = phoneEl.value.trim(); // <-- تم تصحيح قراءة قيمة الحقل مباشرة
+  let phone = phoneEl.value.trim();
   let manualLocation = manualLocationEl ? manualLocationEl.value.trim() : '';
   let gpsLocation = gpsLocationEl ? gpsLocationEl.value.trim() : '';
   
@@ -684,9 +681,6 @@ function doLogin(){
   try { localStorage.setItem("user", JSON.stringify(user)); } catch(e){}
 
   showToast("✅ تم حفظ البيانات بنجاح!");
-  showPage('profilePage');
-}
-
   showPage('profilePage');
 }
 
