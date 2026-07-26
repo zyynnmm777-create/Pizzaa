@@ -499,15 +499,39 @@ function getMyLocation() {
 }
 
 function sendOrderToDatabase(orderData) {
-  fetch('/.netlify/functions/add-order', {
-      method: 'POST',
+  const binId = "6a62de31da38895dfe880c51";
+  const apiKey = "$2a$10$SFp39MxEU6Yap7LAY.6R/uvwKjPWfBZDiBUW0miqPPwM9aGmwSPna"; 
+
+  fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      method: 'GET',
       headers: {
-          'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(orderData)
+          'X-Master-Key': apiKey,
+          'X-Access-Key': apiKey
+      }
   })
   .then(response => {
-      if (!response.ok) throw new Error("فشل في إرسال الطلب.");
+      if (!response.ok) throw new Error("فشل في جلب الطلبات السابقة.");
+      return response.json();
+  })
+  .then(data => {
+      let currentOrders = [];
+      if (data && data.record) {
+          currentOrders = Array.isArray(data.record) ? data.record : (data.record.orders || []);
+      }
+      
+      currentOrders.push(orderData);
+
+      return fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': apiKey
+          },
+          body: JSON.stringify({ orders: currentOrders })
+      });
+  })
+  .then(response => {
+      if (!response.ok) throw new Error("فشل في تحديث قاعدة البيانات.");
       return response.json();
   })
   .catch(error => {
@@ -567,11 +591,17 @@ function renderOrders() {
 
   container.innerHTML = '<div style="text-align:center; color:#aaa;">جاري تحميل طلباتك...</div>';
 
-  fetch('/.netlify/functions/get-orders')
-  .then(response => {
-      if (!response.ok) throw new Error("فشل في جلب الطلبات.");
-      return response.json();
+  const binId = "6a62de31da38895dfe880c51";
+  const apiKey = "$2a$10$SFp39MxEU6Yap7LAY.6R/uvwKjPWfBZDiBUW0miqPPwM9aGmwSPna";
+
+  fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      method: 'GET',
+      headers: {
+          'X-Master-Key': apiKey,
+          'X-Access-Key': apiKey
+      }
   })
+  .then(response => response.json())
   .then(data => {
       let remoteOrders = [];
       if (data && data.record) {
@@ -631,7 +661,7 @@ function doLogin(){
   if(!nameEl || !phoneEl) return;
 
   let name = nameEl.value.trim();
-  let phone = phoneEl.phone ? phoneEl.phone.trim() : phoneEl.value.trim();
+  let phone = phoneEl.value.trim(); // <-- تم تصحيح قراءة قيمة الحقل مباشرة
   let manualLocation = manualLocationEl ? manualLocationEl.value.trim() : '';
   let gpsLocation = gpsLocationEl ? gpsLocationEl.value.trim() : '';
   
@@ -654,6 +684,9 @@ function doLogin(){
   try { localStorage.setItem("user", JSON.stringify(user)); } catch(e){}
 
   showToast("✅ تم حفظ البيانات بنجاح!");
+  showPage('profilePage');
+}
+
   showPage('profilePage');
 }
 
