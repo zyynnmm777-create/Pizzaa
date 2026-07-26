@@ -8,20 +8,23 @@ const supabase = createClient(
 exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
+    
+    // دعم استقبال الأسماء بالطريقتين لمنع أي خطأ
+    const id = body.id || body.orderId;
+    const status = body.status || body.newStatus;
 
-    // إذا كان الطلب يتضمن ID وحالة، فهذا يعني تحديث حالة الطلب
-    if (body.id && body.status) {
+    if (id && status) {
       const { error } = await supabase
         .from('orders')
-        .update({ status: body.status })
-        .eq('id', body.id);
+        .update({ status: status })
+        .eq('id', id);
 
       if (error) throw error;
       return { statusCode: 200, body: JSON.stringify({ success: true, message: 'تم التحديث بنجاح' }) };
     } 
     
-    // وإلا فهذا يعني إنشاء طلب جديد من المتجر
     else {
+      // إنشاء طلب جديد
       const { error } = await supabase.from('orders').insert([
         {
           customer_name: body.customer_name,
