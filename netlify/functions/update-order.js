@@ -9,7 +9,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body);
     
-    // دعم استقبال الأسماء بالطريقتين لمنع أي خطأ
+    // دعم استقبال معرف الطلب والحالة بأكثر من مسمى لمنع الأخطاء
     const id = body.id || body.orderId;
     const status = body.status || body.newStatus;
 
@@ -24,15 +24,19 @@ exports.handler = async (event) => {
     } 
     
     else {
-      // إنشاء طلب جديد
+      // دعم استقبال أسماء حقول الزبون بالطريقتين (CamelCase أو snake_case)
+      const cName = body.customer_name || body.customerName;
+      const cPhone = body.customer_phone || body.customerPhone;
+      const cLocation = body.customer_location || body.customerLocation;
+
       const { error } = await supabase.from('orders').insert([
         {
-          customer_name: body.customer_name,
-          customer_phone: body.customer_phone,
-          customer_location: body.customer_location,
+          customer_name: cName,
+          customer_phone: cPhone,
+          customer_location: cLocation,
           items: body.items,
           total: body.total,
-          status: 'جديد'
+          status: 'قيد المراجعة ⏳'
         }
       ]);
 
