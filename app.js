@@ -563,7 +563,7 @@ function checkout() {
   };
 
   // إرسال الطلب إلى دالة Netlify الآمنة التي ستربطه بـ Supabase
-  fetch('/.netlify/functions/manage-order', { // أو اسم ملف الدالة لديك الذي يتعامل مع الإضافة والتحديث
+  fetch('/.netlify/functions/update-order', { // أو اسم ملف الدالة لديك الذي يتعامل مع الإضافة والتحديث
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
