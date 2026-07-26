@@ -12,12 +12,14 @@ exports.handler = async (event) => {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) throw error;  
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data)
+    return {  
+      statusCode: 200,  
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)  
     };
+
   } catch (err) {
     return {
       statusCode: 500,
